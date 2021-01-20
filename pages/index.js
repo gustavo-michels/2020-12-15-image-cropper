@@ -22,8 +22,40 @@ function ImageCropper({ src }) {
       onDrag: ({ movement: [dx, dy] }) => {
         setCrop((crop) => ({ ...crop, x: dx, y: dy }));
       },
-      onPinch: ({ offset: [d] }) => {
-        setCrop((crop) => ({ ...crop, scale: 1 + d / 50 }));
+
+      /*
+        Zooms at center
+      */
+      // onPinch: ({ offset: [d] }) => {
+      //   setCrop((crop) => ({ ...crop, scale: 1 + d / 50 }));
+      // },
+
+      /*
+        Zooms at origin of pinch
+      */
+      onPinch: ({
+        origin: [ox, oy],
+        first,
+        movement: [md],
+        offset: [d],
+        memo = [crop.x, crop.y],
+      }) => {
+        if (first) {
+          const {
+            width,
+            height,
+            x,
+            y,
+          } = imageRef.current.getBoundingClientRect();
+          const tx = (ox - (x + width / 2)) / crop.scale;
+          const ty = (oy - (y + height / 2)) / crop.scale;
+          memo = [...memo, tx, ty];
+        }
+        const ms = md / 50;
+        const x = memo[0] - ms * memo[2];
+        const y = memo[1] - ms * memo[3];
+        setCrop((crop) => ({ ...crop, scale: 1 + d / 50, x, y }));
+        return memo;
       },
 
       onDragEnd: maybeAdjustImage,
