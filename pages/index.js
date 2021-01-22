@@ -14,12 +14,13 @@ export default function Home() {
 }
 
 function ImageCropper({ src }) {
-  let [crop, setCrop] = useState({ x: 0, y: 0, scale: 1 });
+  let [crop, setCrop] = useState({ x: 0, y: 0, scale: 1, rotateZ: 0 });
   let imageRef = useRef();
   let imageContainerRef = useRef();
   useGesture(
     {
       onDrag: ({ movement: [dx, dy] }) => {
+        // console.log("dragging?");
         setCrop((crop) => ({ ...crop, x: dx, y: dy }));
       },
 
@@ -35,32 +36,84 @@ function ImageCropper({ src }) {
       */
       onPinch: ({
         origin: [ox, oy],
+        // movement: [md],
         first,
-        movement: [md],
         offset: [d],
         memo = [crop.x, crop.y],
       }) => {
+        // console.log(d);
+
         if (first) {
-          const {
-            width,
-            height,
-            x,
-            y,
-          } = imageRef.current.getBoundingClientRect();
-          const tx = (ox - (x + width / 2)) / crop.scale;
-          const ty = (oy - (y + height / 2)) / crop.scale;
-          memo = [...memo, tx, ty];
+          let initialOffset = (crop.scale - 1) * 50;
+          memo = [...memo, initialOffset];
         }
-        const ms = md / 50;
-        const x = memo[0] - ms * memo[2];
-        const y = memo[1] - ms * memo[3];
+
+        let md = d - memo[2];
+        // console.log({ md });
+
+        // console.log({ d });
+        // console.log({ memo2: memo[2] });
+        // console.log({ md });
+
+        // console.log({ d });
+        // if (first) {
+        //   let initialDistanceOffset = (crop.scale - 1) * 50;
+        //   memo = [...memo, initialDistanceOffset];
+        // }
+
+        // let totalMovement = md + memo[2];
+
+        let bounds = imageRef.current.getBoundingClientRect();
+        let tx = (ox - (bounds.x + bounds.width / 2)) / crop.scale;
+        let ty = (oy - (bounds.y + bounds.height / 2)) / crop.scale;
+        let ms = md / 50;
+        let x = memo[0] - ms * tx;
+        let y = memo[1] - ms * ty;
+
+        // console.log(`d=${d} md=${md} x=${x}`);
+        console.log(`d=${d} crop=${crop.scale} x=${x}`);
+
         setCrop((crop) => ({ ...crop, scale: 1 + d / 50, x, y }));
+
         return memo;
       },
+
+      // Solution
+      //   onPinch: ({
+      //     origin: [originX, originY],
+      //     movement: [movementDistance],
+      //     offset: [offsetDistance],
+      //     memo = { x: crop.x, y: crop.y },
+      //   }) => {
+      //     let imageBounds = imageRef.current.getBoundingClientRect();
+      //     let imageCenter = {
+      //       x: imageBounds.x + imageBounds.width / 2,
+      //       y: imageBounds.y + imageBounds.height / 2,
+      //     };
+      //     let distanceToOrigin = {
+      //       x: (originX - imageCenter.x) / crop.scale,
+      //       y: (originY - imageCenter.y) / crop.scale,
+      //     };
+      //     let scaledMovementDistance = movementDistance / 50;
+      //     let scaledDistanceToOrigin = {
+      //       x: -distanceToOrigin.x * scaledMovementDistance,
+      //       y: -distanceToOrigin.y * scaledMovementDistance,
+      //     };
+
+      //     setCrop((crop) => ({
+      //       ...crop,
+      //       scale: 1 + offsetDistance / 50,
+      //       x: memo.x + scaledDistanceToOrigin.x,
+      //       y: memo.y + scaledDistanceToOrigin.y,
+      //     }));
+
+      //     return memo;
+      //   },
 
       onDragEnd: maybeAdjustImage,
       onPinchEnd: maybeAdjustImage,
     },
+
     {
       drag: {
         initial: () => [crop.x, crop.y],
@@ -68,7 +121,7 @@ function ImageCropper({ src }) {
       pinch: {
         distanceBounds: { min: 0 },
       },
-      domTarget: imageRef,
+      domTarget: imageContainerRef,
       eventOptions: { passive: false },
     }
   );
@@ -101,15 +154,22 @@ function ImageCropper({ src }) {
   return (
     <>
       <div className="overflow-hidden ring-4 ring-blue-500 aspect-w-3 aspect-h-4">
-        <div ref={imageContainerRef}>
+        <div
+          ref={imageContainerRef}
+          style={{
+            touchAction: "none",
+            userSelect: "none",
+          }}
+        >
           <img
             src={src}
             ref={imageRef}
             style={{
               left: crop.x,
               top: crop.y,
-              transform: `scale(${crop.scale})`,
+              transform: `scale(${crop.scale}) rotateZ(${crop.rotateZ})`,
               touchAction: "none",
+              userSelect: "none",
             }}
             className="relative w-auto h-full max-w-none max-h-none"
           />
